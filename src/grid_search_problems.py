@@ -12,15 +12,18 @@ Created on 8 nov 2022
 from search import *
 from enum import Enum, unique
 
+import matplotlib.pyplot as plt
 import heuristics
-from django.db.migrations import state
+import math
+import utils4e
+
 
 @unique
 class Directions(Enum):
  
-    UP=(0,1),
-    DOWN=(0,-1),
-    RIGHT=(1,0),
+    UP=(0,1)
+    DOWN=(0,-1)
+    RIGHT=(1,0)
     LEFT=(-1,0)
 
 
@@ -37,7 +40,16 @@ class GridProblem(Problem):
         Problem.__init__(self, initial, goal=goal,
                          obstacles=set(obstacles) - {initial, goal}, **kwds)
         
-        self.__directions = [Directions.DOWN, Directions.UP, Directions.RIGHT, Directions.LEFT]
+        self.__directions = [Directions.__members__[k].value for k in Directions.__members__.keys()]
+        self.__failure = Node('FALLO', path_cost=math.inf) #Nodo que indica que
+                        #indica que el algoritmo no encuentra solución al problema
+        self.__cutoff = Node('INTERRUMPIDO', path_cost=math.inf) #Nodo que indica
+                    #que el algoritmo de búsqueda en profundidad se ha
+                        #interrumpido.
+    def is_goal(self, state):
+        return Problem.is_goal(self, state)
+
+                        
 
     def action_cost(self, s, a, s1):
         return heuristics.straight_line_distance(s, s1)
@@ -58,9 +70,9 @@ class GridProblem(Problem):
         """
         #inline: {(x + self.__directions.__members__[k],y + self.__directions.__members__[k])[1]for k in self.__directions.__members__.keys()}
         x, y = state
-        next_states = {}
-        for k in self.__directions.keys():
-            next_states.add(x + self.__directions[k][0], y + self.__directions[k][1])
+        next_states = set()
+        for d in self.__directions:
+            next_states.add((x + d[0], y + d[1]))
         
         #It is a difference among sets. All the possible actions except the obstacles.
         
@@ -71,9 +83,6 @@ class GridProblem(Problem):
         return action if action not in self.obstacles else state
 
 
-    def goal_test(self, state):
-        return Problem.goal_test(self, state)
-
 
     def path_cost(self, c, state1, action, state2):
         return Problem.path_cost(self, c, state1, action, state2)
@@ -81,5 +90,30 @@ class GridProblem(Problem):
 
     def value(self, state):
         return Problem.value(self, state)
+    
+    def plot_grid_problem(self, solution, title='Search', show=True):
+        """It plots a grid problem.
+        
+        Args:
+            grid:
+            solution:
+            reached:
+            title:
+            show: Boolean value that determines whether the plot must be showed
+            or not.
+        
+        """
+        plt.figure(figsize=(16, 10))
+        plt.axis('off')
+        plt.axis('equal')
+        plt.scatter(*transpose(self.obstacles), marker='s', color='darkgrey')
+        plt.scatter(*transpose(self.explored), marker='.', c='blue')
+        plt.scatter(*transpose(solution.path_states()), marker='s', c='blue')
+        plt.scatter(*transpose([self.initial]), 9**2, marker='D', c='green')
+        plt.scatter(*transpose([self.goal]), 9**2, marker='D', c='red')
+        if show: plt.show()
+        print('{} {} search: {:.1f} path cost, {:,d} states reached'
+          .format(' ' * 10, title, solution.path_cost, len(self.explored)))
+        
 
         

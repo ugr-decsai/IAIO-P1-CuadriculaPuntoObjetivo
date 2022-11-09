@@ -815,3 +815,15 @@ class Bool(int):
 
 T = Bool(True)
 F = Bool(False)
+
+
+
+# For Plotting
+
+def transpose(matrix):
+    """Take all the x and y argument toguether.
+    
+    Args:
+        matrix: It is a collection of sets of points (x, y).
+    """
+    return list(zip(*matrix))

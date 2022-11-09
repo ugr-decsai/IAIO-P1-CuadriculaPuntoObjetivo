@@ -36,6 +36,15 @@ class Problem:
         state, if there is a unique goal. Your subclass's constructor can add
         other arguments."""
         self.__dict__.update(initial=initial, goal=goal, **kwds)
+        self.__explored = None
+        
+    @property
+    def explored(self):
+        return self.__explored
+    
+    @explored.setter
+    def explored(self, a_exp):
+        self.__explored = a_exp
 
     def actions(self, state):
         """Return the actions that can be executed in the given
@@ -114,6 +123,7 @@ class Node:
     def __lt__(self, node):
         return self.state < node.state
 
+    
     def expand(self, problem):
         """List the nodes reachable in one step from this node."""
         return [self.child_node(problem, action)
@@ -136,6 +146,16 @@ class Node:
             path_back.append(node)
             node = node.parent
         return list(reversed(path_back))
+    
+    def path_states(self):
+        """Return a list of nodes states.
+        """
+        node, path_back = self, []
+        while node:
+            path_back.append(node.state)
+            node = node.parent
+        return list(reversed(path_back))
+        
 
     # We want for a queue of nodes in breadth_first_graph_search or
     # astar_search to have no duplicated states, so we treat nodes
@@ -151,6 +171,8 @@ class Node:
         # object itself to quickly search a node
         # with the same state in a Hash Table
         return hash(self.state)
+    
+    def __len__(self): return 0 if self.parent is None else (1 + len(self.parent))
 
 
 # ______________________________________________________________________________
@@ -211,10 +233,12 @@ def breadth_first_tree_search(problem):
 
     while frontier:
         node = frontier.popleft()
-        if problem.goal_test(node.state):
+        if problem.is_goal(node.state):
             return node
         frontier.extend(node.expand(problem))
     return None
+
+
 
 
 def depth_first_tree_search(problem):
@@ -250,7 +274,8 @@ def depth_first_graph_search(problem):
     explored = set()
     while frontier:
         node = frontier.pop()
-        if problem.goal_test(node.state):
+        if problem.is_goal(node.state):
+            problem.explored = explored
             return node
         explored.add(node.state)
         frontier.extend(child for child in node.expand(problem)
@@ -259,13 +284,25 @@ def depth_first_graph_search(problem):
 
 
 def breadth_first_graph_search(problem):
-    """[Figure 3.11]
+    """The search algorithm tracks in the explored variables the nodes reached
+    during the search.
+    
+    Original comment from Ed3 of the book: [Figure 3.11]
     Note that this function can be implemented in a
     single line as below:
     return graph_search(problem, FIFOQueue())
+    
+    
+    Args:
+        problem: A Problem object that represents the problem to be resolve.
+    
+    Returns:
+        The goal node in case the problem has a solution and the set of explored
+        nodes. Failure Node.
     """
     node = Node(problem.initial)
-    if problem.goal_test(node.state):
+    if problem.is_goal(node.state):
+        problem.explored = set(node.state)
         return node
     frontier = deque([node])
     explored = set()
@@ -274,7 +311,8 @@ def breadth_first_graph_search(problem):
         explored.add(node.state)
         for child in node.expand(problem):
             if child.state not in explored and child not in frontier:
-                if problem.goal_test(child.state):
+                if problem.is_goal(child.state):
+                    problem.explored=explored
                     return child
                 frontier.append(child)
     return None
@@ -295,9 +333,10 @@ def best_first_graph_search(problem, f, display=False):
     explored = set()
     while frontier:
         node = frontier.pop()
-        if problem.goal_test(node.state):
+        if problem.is_goal(node.state):
             if display:
                 print(len(explored), "paths have been expanded and", len(frontier), "paths remain in the frontier")
+            problem.explored = explored
             return node
         explored.add(node.state)
         for child in node.expand(problem):
